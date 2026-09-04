@@ -59,6 +59,18 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Resume chatbot — golden-hour palette */
+  --color-cream: #faf5ec;
+  --color-dune: #f2e9db;
+  --color-sand: #e7d9c4;
+  --color-ink: #2a231b;
+  --color-ember: #be5e2c;
+  --color-honey: #e6a85c;
+
+  /* Resume chatbot — typography */
+  --font-display: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
 }
 
 :root {
