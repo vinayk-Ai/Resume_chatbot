@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import profileImage from "@/assets/profile.jpg";
+import profileImage from "@/assets/profile1.jpg";
+import ReactMarkdown from "react-markdown";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -30,43 +31,57 @@ type Message = {
   content: string;
 };
 
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: "1",
-    role: "user",
-    content: "Can you tell me about your experience with design systems?",
-  },
-  {
-    id: "2",
-    role: "assistant",
-    content:
-      "Absolutely. I led the design system rebuild at Halcyon, unifying 3 product teams around 40+ shared components. Adoption grew 3x in one quarter and cut our design-to-dev handoff time by roughly 40%.",
-  },
-  {
-    id: "3",
-    role: "user",
-    content: "And your approach to accessibility?",
-  },
-  {
-    id: "4",
-    role: "assistant",
-    content:
-      "Accessibility is a starting point, not a checklist. I bake WCAG AA into every token and run automated audits before ship. It's built into the system so it can't be quietly skipped.",
-  },
-];
+const INITIAL_MESSAGES: Message[] = [{ id: "1", role: "user", content: "Tell me about yourself.", },
+{ id: "2", role: "assistant", content: "I'm Vinay Kumar, a Full Stack AI Engineer with a background in Computer Science and Artificial Intelligence. I enjoy building full-stack applications and integrating AI and machine learning into practical products.", },];
 
-const SUGGESTED_QUESTIONS = [
-  "What's your leadership style?",
-  "Which tools do you use daily?",
-  "Where do you see yourself in 3 years?",
-];
-
+const SUGGESTED_QUESTIONS = ["Tell me about yourself.",
+  "What are your key skills and technologies?",
+  "Can you tell me about your projects and experience?",];
 // Replace this with your backend call.
-async function fetchAnswer(question: string): Promise<string> {
-  // TODO: wire this to your backend endpoint
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  return `Thanks for asking: "${question}". This is a placeholder answer — connect fetchAnswer to your backend to return real responses.`;
+async function fetchAnswer(
+  question: string,
+  onChunk: (chunk: string) => void
+): Promise<void> {
+  const response = await fetch("http://127.0.0.1:8000/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      question,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Backend request failed");
+  }
+
+  if (!response.body) {
+    throw new Error("Streaming is not supported");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { value, done } = await reader.read();
+
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true });
+
+    if (chunk) {
+      onChunk(chunk);
+    }
+  }
+  const finalChunk = decoder.decode();
+
+  if (finalChunk) {
+    onChunk(finalChunk);
+  }
 }
+
+
 
 function Index() {
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
@@ -82,6 +97,7 @@ function Index() {
 
   const handleSend = async (text: string) => {
     const question = text.trim();
+
     if (!question || isLoading) return;
 
     const userMessage: Message = {
@@ -90,30 +106,50 @@ function Index() {
       content: question,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const assistantId = crypto.randomUUID();
+
+    const assistantMessage: Message = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+    };
+
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      assistantMessage,
+    ]);
+
     setInput("");
     setIsLoading(true);
 
     try {
-      const answer = await fetchAnswer(question);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: answer,
-        },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content:
-            "Sorry, I couldn't reach the backend right now. Please try again.",
-        },
-      ]);
+      await fetchAnswer(question, (chunk) => {
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? {
+                ...message,
+                content: message.content + chunk,
+              }
+              : message
+          )
+        );
+      });
+    } catch (error) {
+      console.error(error);
+
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantId
+            ? {
+              ...message,
+              content:
+                "Sorry, I couldn't reach the backend right now. Please try again.",
+            }
+            : message
+        )
+      );
     } finally {
       setIsLoading(false);
     }
@@ -129,10 +165,10 @@ function Index() {
       <header className="mx-auto grid max-w-3xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-sand/60 px-4 pb-4 pt-6 sm:px-6 sm:pb-6 sm:pt-10">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <span className="shrink-0 font-display text-lg text-ember sm:text-xl">
-            A
+            V
           </span>
           <span className="truncate text-xs font-medium uppercase tracking-[0.2em] text-ink sm:text-sm">
-            Ask Aria
+            Ask Vinay
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -149,16 +185,16 @@ function Index() {
             <img
               src={profileImage}
               alt="Aria Bennett"
-              width={1024}
-              height={1024}
+              width={900}
+              height={1406}
               className="size-full object-cover"
             />
           </div>
           <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl md:text-5xl">
-            Aria Bennett
+            Vinay Kumar
           </h1>
           <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-ember sm:text-sm sm:tracking-[0.25em]">
-            Senior Product Designer
+            Full Stack AI Engineer
           </p>
           <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink/70 sm:text-base">
             Ask me anything — I'll answer about my work, skills, and experience
@@ -166,46 +202,34 @@ function Index() {
           </p>
         </div>
 
-        <div
-          ref={threadRef}
-          className="mb-8 flex max-h-[55vh] flex-col gap-4 overflow-y-auto scroll-smooth sm:mb-10 sm:max-h-[60vh] sm:gap-5"
-        >
 
-          {messages.map((message) =>
-            message.role === "user" ? (
-              <div key={message.id} className="flex justify-end">
-                <div className="max-w-[85%] break-words rounded-2xl rounded-br-md bg-ember px-4 py-3 text-[15px] leading-relaxed text-cream shadow-[0_10px_30px_-12px_rgba(190,94,44,0.6)] sm:max-w-xs sm:px-5 sm:py-3.5 md:max-w-md">
-                  {message.content}
-                </div>
-              </div>
-            ) : (
-              <div key={message.id} className="flex justify-start">
-                <div className="max-w-[85%] break-words rounded-2xl rounded-bl-md border border-sand/50 bg-white/70 px-4 py-3 text-[15px] leading-relaxed text-ink sm:max-w-md sm:px-5 sm:py-3.5 md:max-w-lg">
-                  {message.content}
-                </div>
-              </div>
-            )
-          )}
-
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-sand/50 bg-white/70 px-5 py-4">
-                <span
-                  className="size-1.5 animate-bounce rounded-full bg-ink/40"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <span
-                  className="size-1.5 animate-bounce rounded-full bg-ink/40"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <span
-                  className="size-1.5 animate-bounce rounded-full bg-ink/40"
-                  style={{ animationDelay: "300ms" }}
-                />
+        {messages.map((message) =>
+          message.role === "user" ? (
+            <div key={message.id} className="flex justify-end">
+              <div className="max-w-[85%] break-words rounded-2xl rounded-br-md bg-ember px-4 py-3 text-[15px] leading-relaxed text-cream">
+                {message.content}
               </div>
             </div>
-          )}
-        </div>
+          ) : (
+            <div key={message.id} className="flex justify-start">
+              <div className="max-w-[85%] break-words rounded-2xl rounded-bl-md border border-sand/50 bg-white/70 px-4 py-3 text-[15px] leading-relaxed text-ink sm:max-w-md">
+
+                <div className="whitespace-pre-wrap">
+                <ReactMarkdown>
+                       {message.content}
+                </ReactMarkdown>
+                 
+                </div>
+
+                {isLoading &&
+                  message.id === messages[messages.length - 1]?.id && (
+                    <span className="ml-1 inline-block animate-pulse">▌</span>
+                  )}
+
+              </div>
+            </div>
+          )
+        )}
 
         <div className="mb-6 flex snap-x gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mb-8 sm:flex-wrap sm:gap-2.5 sm:overflow-visible">
           {SUGGESTED_QUESTIONS.map((question) => (
@@ -213,6 +237,7 @@ function Index() {
               key={question}
               type="button"
               onClick={() => handleSend(question)}
+              disabled={isLoading}
               className="shrink-0 snap-start whitespace-nowrap rounded-full bg-dune px-4 py-2 text-[13px] text-ink/70 transition-colors hover:bg-sand sm:whitespace-normal sm:text-sm"
             >
               {question}
