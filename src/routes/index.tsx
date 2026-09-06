@@ -42,7 +42,7 @@ async function fetchAnswer(
   question: string,
   onChunk: (chunk: string) => void
 ): Promise<void> {
-  const response = await fetch("http://127.0.0.1:8000/", {
+  const response = await fetch("https://resume-chatbot-backend-069d.onrender.com/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
